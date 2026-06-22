@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 
 ## 0.1.0 - 2026-06-22
 
-- Initial private preview release.
+- Initial public preview release.
 - Added configurable connection profiles.
 - Added SSH tunnel management through the user's installed OpenSSH client.
 - Added optional File Browser credential storage through Windows Credential Manager.
