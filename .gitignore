@@ -1,0 +1,16 @@
+**/bin/
+**/obj/
+dist/
+.vs/
+.vscode/
+TestResults/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+*.nupkg
+
+# Local runtime data belongs in AppData, never the repo.
+profiles.json
+*.log
+*.tmp
