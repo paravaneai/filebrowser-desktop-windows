@@ -1,0 +1,162 @@
+﻿<Window x:Class="FileBrowserDesktop.ProfileEditorWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Connection Profile"
+        Width="520"
+        Height="700"
+        MinWidth="520"
+        MinHeight="640"
+        WindowStartupLocation="CenterOwner"
+        Background="#F6F7F9">
+    <Grid Margin="18">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <StackPanel Grid.Row="0">
+            <TextBlock Text="Connection Profile"
+                       FontSize="22"
+                       FontWeight="SemiBold"
+                       Foreground="#111827" />
+            <TextBlock Margin="0,6,0,16"
+                       Text="Profiles store connection settings only. File Browser credentials are saved separately in Windows Credential Manager."
+                       Foreground="#475569"
+                       TextWrapping="Wrap" />
+        </StackPanel>
+
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+            <StackPanel>
+                <TextBlock Margin="0,0,0,8"
+                           Text="SSH Tunnel"
+                           FontWeight="SemiBold"
+                           Foreground="#111827" />
+
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="155" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+
+                    <TextBlock Grid.Row="0" Grid.Column="0" Margin="0,0,12,10" VerticalAlignment="Center" Text="Profile name" />
+                    <TextBox x:Name="NameTextBox" Grid.Row="0" Grid.Column="1" Margin="0,0,0,10" />
+
+                    <TextBlock Grid.Row="1" Grid.Column="0" Margin="0,0,12,10" VerticalAlignment="Center" Text="SSH username" />
+                    <TextBox x:Name="SshUserTextBox" Grid.Row="1" Grid.Column="1" Margin="0,0,0,10" />
+
+                    <TextBlock Grid.Row="2" Grid.Column="0" Margin="0,0,12,10" VerticalAlignment="Center" Text="SSH host" />
+                    <TextBox x:Name="SshHostTextBox" Grid.Row="2" Grid.Column="1" Margin="0,0,0,10" />
+
+                    <TextBlock Grid.Row="3" Grid.Column="0" Margin="0,0,12,10" VerticalAlignment="Center" Text="SSH port" />
+                    <TextBox x:Name="SshPortTextBox" Grid.Row="3" Grid.Column="1" Margin="0,0,0,10" />
+
+                    <TextBlock Grid.Row="4" Grid.Column="0" Margin="0,0,12,10" VerticalAlignment="Center" Text="SSH key file" />
+                    <DockPanel Grid.Row="4" Grid.Column="1" Margin="0,0,0,10">
+                        <Button Content="Browse"
+                                Width="72"
+                                Margin="8,0,0,0"
+                                Click="BrowseIdentityFileButton_Click"
+                                DockPanel.Dock="Right" />
+                        <TextBox x:Name="SshIdentityFileTextBox"
+                                 ToolTip="Optional. Leave blank to use your default SSH config, keys, or agent." />
+                    </DockPanel>
+
+                    <TextBlock Grid.Row="5" Grid.Column="0" Margin="0,0,12,10" VerticalAlignment="Center" Text="Local host" />
+                    <TextBox x:Name="LocalHostTextBox" Grid.Row="5" Grid.Column="1" Margin="0,0,0,10" />
+
+                    <TextBlock Grid.Row="6" Grid.Column="0" Margin="0,0,12,10" VerticalAlignment="Center" Text="Local port" />
+                    <TextBox x:Name="LocalPortTextBox" Grid.Row="6" Grid.Column="1" Margin="0,0,0,10" />
+
+                    <TextBlock Grid.Row="7" Grid.Column="0" Margin="0,0,12,10" VerticalAlignment="Center" Text="Remote host" />
+                    <TextBox x:Name="RemoteHostTextBox" Grid.Row="7" Grid.Column="1" Margin="0,0,0,10" />
+
+                    <TextBlock Grid.Row="8" Grid.Column="0" Margin="0,0,12,10" VerticalAlignment="Center" Text="Remote port" />
+                    <TextBox x:Name="RemotePortTextBox" Grid.Row="8" Grid.Column="1" Margin="0,0,0,10" />
+                </Grid>
+
+                <Border Margin="0,10,0,12"
+                        BorderBrush="#D8DEE8"
+                        BorderThickness="0,1,0,0" />
+
+                <TextBlock Margin="0,0,0,8"
+                           Text="File Browser Login"
+                           FontWeight="SemiBold"
+                           Foreground="#111827" />
+                <TextBlock Margin="0,0,0,10"
+                           Text="Optional. Saved credentials are stored in Windows Credential Manager and used only to prefill the login form."
+                           Foreground="#475569"
+                           TextWrapping="Wrap" />
+
+                <CheckBox x:Name="SaveFileBrowserCredentialCheckBox"
+                          Margin="0,0,0,10"
+                          Content="Save File Browser credentials in Windows Credential Manager" />
+
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="155" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+
+                    <TextBlock Grid.Row="0" Grid.Column="0" Margin="0,0,12,10" VerticalAlignment="Center" Text="Username" />
+                    <TextBox x:Name="FileBrowserUsernameTextBox" Grid.Row="0" Grid.Column="1" Margin="0,0,0,10" />
+
+                    <TextBlock Grid.Row="1" Grid.Column="0" Margin="0,0,12,10" VerticalAlignment="Center" Text="Password" />
+                    <PasswordBox x:Name="FileBrowserPasswordBox"
+                                 Grid.Row="1"
+                                 Grid.Column="1"
+                                 Margin="0,0,0,10"
+                                 ToolTip="Leave blank to keep the existing saved password." />
+
+                    <Button Grid.Row="2"
+                            Grid.Column="1"
+                            Width="156"
+                            HorizontalAlignment="Left"
+                            Content="Delete saved credential"
+                            Click="DeleteCredentialButton_Click" />
+                </Grid>
+
+                <TextBlock x:Name="CredentialStatusText"
+                           Margin="0,10,0,0"
+                           Foreground="#475569"
+                           TextWrapping="Wrap" />
+
+                <TextBlock x:Name="ErrorText"
+                           Margin="0,12,0,0"
+                           Foreground="#DC2626"
+                           TextWrapping="Wrap" />
+            </StackPanel>
+        </ScrollViewer>
+
+        <DockPanel Grid.Row="2" Margin="0,14,0,0" LastChildFill="False">
+            <Button Content="Cancel"
+                    Width="88"
+                    Height="32"
+                    Margin="0,0,8,0"
+                    Click="CancelButton_Click"
+                    DockPanel.Dock="Right" />
+            <Button Content="Save"
+                    Width="88"
+                    Height="32"
+                    IsDefault="True"
+                    Click="SaveButton_Click"
+                    DockPanel.Dock="Right" />
+        </DockPanel>
+    </Grid>
+</Window>
