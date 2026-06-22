@@ -5,7 +5,7 @@ Small WPF/WebView2 desktop wrapper for the private server-side File Browser.
 File Browser Desktop is designed for users who want a dedicated Windows desktop window for File Browser without exposing File Browser directly to the public internet.
 
 <p align="center">
-  <img src="src/Assets/filebrowser.png" alt="File Browser Desktop app icon" width="160">
+  <img src="src/Assets/filebrowser-desktop.png" alt="File Browser Desktop app icon" width="160">
 </p>
 
 ## Project Status
