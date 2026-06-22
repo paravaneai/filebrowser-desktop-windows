@@ -1,6 +1,6 @@
 # File Browser Desktop
 
-Small WPF/WebView2 desktop wrapper for the private server-side File Browser.
+Dedicated Windows desktop client for privately accessing File Browser over SSH.
 
 File Browser Desktop is designed for users who want a dedicated Windows desktop window for File Browser without exposing File Browser directly to the public internet.
 
@@ -10,7 +10,13 @@ File Browser Desktop is designed for users who want a dedicated Windows desktop 
 
 ## Project Status
 
-This project is in private preview. Expect early changes around installation, packaging, and onboarding before the first public stable release.
+This project is in early public preview. Expect changes around installation, packaging, and onboarding before the first stable release.
+
+## Relationship To File Browser
+
+File Browser Desktop is an independent Paravane Labs project. Paravane Labs does not own File Browser and is not affiliated with, endorsed by, or sponsored by the File Browser project.
+
+This app provides a simpler Windows desktop experience for connecting to a File Browser instance that you run on your own server.
 
 ## What It Does
 
@@ -20,10 +26,9 @@ This project is in private preview. Expect early changes around installation, pa
 - Uses the installed OpenSSH Client (`ssh.exe`) for tunnels
 - Supports default SSH config, default keys, ssh-agent, and optional profile-specific identity files
 - Stores optional File Browser username/password in Windows Credential Manager
-- Opens File Browser inside a dedicated desktop WebView2 window
+- Opens File Browser inside a dedicated desktop window
 - Uses `src\Assets\filebrowser.ico` for the app/window/taskbar icon
 - Includes a light/dark theme toggle for the desktop shell
-- Uses a separate WebView2 profile under `%LOCALAPPDATA%\FileBrowserDesktop\WebView2`
 - Stops the SSH tunnel when the desktop window closes
 
 ## Profiles
@@ -94,16 +99,6 @@ Details are in:
 PACKAGING.md
 ```
 
-## Dependencies
-
-The framework-dependent zip requires:
-
-- .NET 8 Desktop Runtime
-- Microsoft Edge WebView2 Runtime
-- OpenSSH Client (`ssh.exe`)
-
-If WebView2 is missing, the app shows the official Microsoft WebView2 install link.
-
 ## Security
 
 The supported access model is SSH tunnel only:
@@ -133,11 +128,5 @@ RunFileBrowserDesktop.cmd
 Or run the published executable directly:
 
 ```cmd
-src\bin\Release\net8.0-windows\win-x64\publish\FileBrowserDesktop.exe
-```
-
-## Rebuild
-
-```cmd
-dotnet publish src\FileBrowserDesktop.csproj -c Release -r win-x64 --self-contained false
+FileBrowserDesktop.exe
 ```
