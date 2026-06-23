@@ -1,132 +1,152 @@
 # File Browser Desktop
 
-Dedicated Windows desktop client for privately accessing File Browser over SSH.
-
-File Browser Desktop is designed for users who want a dedicated Windows desktop window for File Browser without exposing File Browser directly to the public internet.
-
 <p align="center">
-  <img src="src/Assets/filebrowser-desktop.png" alt="File Browser Desktop app icon">
+  <img src="src/Assets/filebrowser.png" alt="File Browser Desktop logo" width="96">
 </p>
 
-## Project Status
+<h3 align="center">A dedicated Windows desktop client for privately accessing File Browser over SSH.</h3>
 
-This project is in early public preview. Expect changes around installation, packaging, and onboarding before the first stable release.
+<p align="center">
+  <a href="INSTALL.md">Installation</a> |
+  <a href="SERVER_SETUP.md">Server setup</a> |
+  <a href="SECURITY.md">Security</a> |
+  <a href="CHANGELOG.md">Release notes</a> |
+  <a href="CONTRIBUTING.md">Contributing</a>
+</p>
 
-## Relationship To File Browser
+<p align="center">
+  <a href="https://github.com/paravaneai/filebrowser-desktop/releases">
+    <img src="https://img.shields.io/github/v/release/paravaneai/filebrowser-desktop?include_prereleases&label=release" alt="Latest release">
+  </a>
+  <a href="LICENSE">
+    <img src="https://img.shields.io/github/license/paravaneai/filebrowser-desktop" alt="License">
+  </a>
+  <a href="https://github.com/paravaneai/filebrowser-desktop/actions/workflows/dotnet.yml">
+    <img src="https://github.com/paravaneai/filebrowser-desktop/actions/workflows/dotnet.yml/badge.svg" alt="Build status">
+  </a>
+  <img src="https://img.shields.io/badge/platform-Windows-0078D4" alt="Windows">
+</p>
 
-File Browser Desktop is an independent Paravane Labs project. Paravane Labs does not own File Browser and is not affiliated with, endorsed by, or sponsored by the File Browser project.
+<p align="center">
+  <img src="src/Assets/filebrowser-desktop.png" alt="File Browser Desktop preview">
+</p>
 
-This app provides a simpler Windows desktop experience for connecting to a File Browser instance that you run on your own server.
+## Overview
 
-## What It Does
+File Browser Desktop gives File Browser a focused Windows desktop home. It starts a private SSH tunnel, opens File Browser in its own app window, and keeps the browser experience out of your everyday tabs.
 
-- Lets you create local connection profiles for one or more servers
-- Starts an SSH tunnel using the selected profile
-- Defaults new profiles to local `127.0.0.1:18080` forwarded to server `127.0.0.1:8080`
-- Uses the installed OpenSSH Client (`ssh.exe`) for tunnels
-- Supports default SSH config, default keys, ssh-agent, and optional profile-specific identity files
-- Stores optional File Browser username/password in Windows Credential Manager
-- Opens File Browser inside a dedicated desktop window
-- Uses `src\Assets\filebrowser.ico` for the app/window/taskbar icon
-- Includes a light/dark theme toggle for the desktop shell
-- Stops the SSH tunnel when the desktop window closes
+The project is built for a simple security model: File Browser stays bound to localhost on your server, and you connect to it through SSH from your Windows desktop.
 
-## Profiles
+## Highlights
 
-On first run, the app opens a setup wizard with two paths:
-
-- Connect to an existing File Browser instance
-- Help install/configure File Browser on a server over SSH
-
-The wizard can:
-
-- Test SSH
-- Run the safe server setup script
-- Test the tunnel
-- Save the profile and open File Browser
-
-Profiles are stored locally at:
-
-```text
-%APPDATA%\FileBrowserDesktop\profiles.json
-```
-
-The profile file stores SSH host/user/port and tunnel ports only. It does not store File Browser passwords, SSH passwords, passphrases, or private keys.
-
-File Browser credentials are stored per profile in Windows Credential Manager under:
-
-```text
-FileBrowserDesktop/FileBrowser/<profile-id>
-```
-
-The app uses those credentials only to prefill the File Browser login form. It does not auto-submit the form.
-
-## Server Setup
-
-For a new server, see:
-
-```text
-SERVER_SETUP.md
-```
-
-The included server script installs/configures File Browser to listen on `127.0.0.1` and does not open firewall ports.
+- Dedicated desktop window for File Browser
+- Configurable connection profiles for one or more servers
+- SSH tunnel management through the user's installed OpenSSH client
+- Support for SSH config, SSH keys, ssh-agent, and optional identity files
+- Optional File Browser credential prefill through Windows Credential Manager
+- First-run wizard for connecting to an existing server or preparing a new one
+- Safe server setup script that keeps File Browser bound to `127.0.0.1`
+- Light and dark desktop shell themes
+- Clean tunnel shutdown when the app closes
 
 ## Install
 
-For Windows prerequisites and zip install steps, see:
-
-```text
-INSTALL.md
-```
-
-For security expectations and credential revocation steps, see:
-
-```text
-SECURITY.md
-```
-
-## Packaging
-
-To create a normal zip release:
-
-```cmd
-package-release.cmd
-```
-
-Details are in:
-
-```text
-PACKAGING.md
-```
-
-## Security
-
-The supported access model is SSH tunnel only:
-
-```text
-Windows desktop app -> SSH tunnel -> server localhost File Browser
-```
-
-Do not expose File Browser directly to the public internet. Review `SECURITY.md` before using this app on a production server.
-
-## Contributing
-
-See `CONTRIBUTING.md` for development setup and pull request expectations.
-
-## License
-
-This project is licensed under the MIT License. See `LICENSE`.
-
-## Run
-
-Double-click:
+Download the latest zip from [Releases](https://github.com/paravaneai/filebrowser-desktop/releases), extract it, and run:
 
 ```cmd
 RunFileBrowserDesktop.cmd
 ```
 
-Or run the published executable directly:
+Then follow the first-run wizard.
 
-```cmd
-FileBrowserDesktop.exe
+For Windows prerequisites and detailed install steps, see [INSTALL.md](INSTALL.md).
+
+## Connection Model
+
+File Browser Desktop is designed around an SSH-only access path:
+
+```text
+Windows desktop app -> SSH tunnel -> server localhost File Browser
 ```
+
+Recommended server binding:
+
+```text
+127.0.0.1:8080
+```
+
+Default desktop tunnel:
+
+```text
+127.0.0.1:18080 -> server 127.0.0.1:8080
+```
+
+Do not expose File Browser directly to the public internet. See [SECURITY.md](SECURITY.md) before using this with a production server.
+
+## Profiles And Credentials
+
+Connection profiles are stored locally at:
+
+```text
+%APPDATA%\FileBrowserDesktop\profiles.json
+```
+
+Profiles store connection settings such as SSH host, SSH username, SSH port, and tunnel ports. They do not store passwords, passphrases, private keys, or File Browser login credentials.
+
+Optional File Browser credentials are stored in Windows Credential Manager under:
+
+```text
+FileBrowserDesktop/FileBrowser/<profile-id>
+```
+
+Those credentials are used only to prefill the File Browser login form. The app does not auto-submit login.
+
+## Server Setup
+
+If File Browser is already installed, the wizard can connect to it as long as it is reachable through SSH and bound privately on the server.
+
+If you want help preparing a server, this repo includes:
+
+```text
+server/install-filebrowser-localhost.sh
+```
+
+The script installs or configures File Browser as a service, binds it to `127.0.0.1`, and does not open public firewall ports. See [SERVER_SETUP.md](SERVER_SETUP.md).
+
+## Documentation
+
+| Document | Purpose |
+| --- | --- |
+| [INSTALL.md](INSTALL.md) | Windows install steps and prerequisites |
+| [SERVER_SETUP.md](SERVER_SETUP.md) | Server install and existing-server setup |
+| [SECURITY.md](SECURITY.md) | Security model, credential storage, and cleanup |
+| [PACKAGING.md](PACKAGING.md) | Release packaging notes |
+| [CHANGELOG.md](CHANGELOG.md) | Version history |
+| [SUPPORT.md](SUPPORT.md) | Support expectations |
+| [CONTRIBUTING.md](CONTRIBUTING.md) | Development and pull request guidance |
+
+## Current Release
+
+The current public preview release is [v000.001.000](https://github.com/paravaneai/filebrowser-desktop/releases/tag/v000.001.000).
+
+This project is still early. Expect changes around installation, packaging, onboarding, and profile management before the first stable release.
+
+## Contributing
+
+Contributions are welcome. Start with [CONTRIBUTING.md](CONTRIBUTING.md) for development setup, branch guidance, and pull request expectations.
+
+Please also review [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md).
+
+## Security
+
+Please do not report sensitive security issues in public issues. See [SECURITY.md](SECURITY.md) for the supported connection model, credential storage details, revocation steps, and reporting guidance.
+
+## Relationship To File Browser
+
+File Browser Desktop is an independent Paravane Labs project. Paravane Labs does not own File Browser and is not affiliated with, endorsed by, or sponsored by the File Browser project.
+
+File Browser is a separate project run by its own maintainers. This desktop app is only a convenience client for connecting to a File Browser instance that you operate.
+
+## License
+
+This project is licensed under the MIT License. See [LICENSE](LICENSE).
