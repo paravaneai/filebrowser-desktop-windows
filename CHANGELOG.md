@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## 0.1.0 - 2026-06-22
+## 000.001.000 - 2026-06-22
 
 - Initial public preview release.
 - Added configurable connection profiles.
