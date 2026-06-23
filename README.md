@@ -21,9 +21,7 @@
   <a href="LICENSE">
     <img src="https://img.shields.io/github/license/paravaneai/filebrowser-desktop" alt="License">
   </a>
-  <a href="https://github.com/paravaneai/filebrowser-desktop/actions/workflows/dotnet.yml">
-    <img src="https://github.com/paravaneai/filebrowser-desktop/actions/workflows/dotnet.yml/badge.svg" alt="Build status">
-  </a>
+  <img src="https://img.shields.io/badge/status-public%20preview-7057ff" alt="Public preview">
   <img src="https://img.shields.io/badge/platform-Windows-0078D4" alt="Windows">
 </p>
 
