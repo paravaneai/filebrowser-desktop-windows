@@ -1,7 +1,7 @@
 # File Browser Desktop
 
 <p align="center">
-  <img src="src/Assets/filebrowser.png" alt="File Browser Desktop logo" width="96">
+  <img src="src/Assets/filebrowser.png" alt="File Browser logo" width="96">
 </p>
 
 <h3 align="center">A dedicated Windows desktop client for privately accessing File Browser over SSH.</h3>
@@ -26,7 +26,7 @@
 </p>
 
 <p align="center">
-  <img src="src/Assets/filebrowser-desktop.png" alt="File Browser Desktop preview">
+  <img src="src/Assets/filebrowserdesktop-file-window-transfer-glossy-xl_transparent-polished.png" alt="File Browser Desktop preview">
 </p>
 
 ## Overview
