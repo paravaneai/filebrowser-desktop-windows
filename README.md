@@ -15,11 +15,11 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/paravaneai/filebrowser-desktop/releases">
-    <img src="https://img.shields.io/github/v/release/paravaneai/filebrowser-desktop?include_prereleases&label=release" alt="Latest release">
+  <a href="https://github.com/paravaneai/filebrowser-desktop-windows/releases">
+    <img src="https://img.shields.io/github/v/release/paravaneai/filebrowser-desktop-windows?include_prereleases&label=release" alt="Latest release">
   </a>
   <a href="LICENSE">
-    <img src="https://img.shields.io/github/license/paravaneai/filebrowser-desktop" alt="License">
+    <img src="https://img.shields.io/github/license/paravaneai/filebrowser-desktop-windows" alt="License">
   </a>
   <img src="https://img.shields.io/badge/status-public%20preview-7057ff" alt="Public preview">
   <img src="https://img.shields.io/badge/platform-Windows-0078D4" alt="Windows">
@@ -49,7 +49,7 @@ The project is built for a simple security model: File Browser stays bound to lo
 
 ## Install
 
-Download the latest zip from [Releases](https://github.com/paravaneai/filebrowser-desktop/releases), extract it, and run:
+Download the latest zip from [Releases](https://github.com/paravaneai/filebrowser-desktop-windows/releases), extract it, and run:
 
 ```cmd
 RunFileBrowserDesktop.cmd
@@ -125,7 +125,7 @@ The script installs or configures File Browser as a service, binds it to `127.0.
 
 ## Current Release
 
-The current public preview release is [v000.001.000](https://github.com/paravaneai/filebrowser-desktop/releases/tag/v000.001.000).
+The current public preview release is [v000.001.000](https://github.com/paravaneai/filebrowser-desktop-windows/releases/tag/v000.001.000).
 
 This project is still early. Expect changes around installation, packaging, onboarding, and profile management before the first stable release.
 
