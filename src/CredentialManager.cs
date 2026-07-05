@@ -12,6 +12,8 @@ internal static class CredentialManager
     private const int CredentialTypeGeneric = 1;
     private const int CredentialPersistLocalMachine = 2;
 
+    public static bool IsSupported => true;
+
     public static string FileBrowserTargetName(string profileId)
     {
         return $"FileBrowserDesktop/FileBrowser/{profileId}";

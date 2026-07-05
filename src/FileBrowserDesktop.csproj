@@ -1,22 +1,46 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
+  <Import Project="Assets\app-build-icon.props" Condition="Exists('Assets\app-build-icon.props')" />
+
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
-    <TargetFramework>net8.0-windows</TargetFramework>
-    <ApplicationIcon>Assets\filebrowser.ico</ApplicationIcon>
+    <TargetFramework>net8.0-windows10.0.17763.0</TargetFramework>
+    <SupportedOSPlatformVersion>10.0.17763.0</SupportedOSPlatformVersion>
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+    <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <UseWPF>true</UseWPF>
+    <ConfiguredApplicationIcon Condition="'$(ConfiguredApplicationIcon)' == ''">Assets\windows-icon\ico\filebrowserdesktop-file-window-transfer-glossy.ico</ConfiguredApplicationIcon>
+    <ApplicationIcon>Assets\app-icon.ico</ApplicationIcon>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
   </PropertyGroup>
 
+  <Target Name="PrepareConfiguredApplicationIcon" BeforeTargets="PrepareForBuild">
+    <Error Condition="!Exists('$(ConfiguredApplicationIcon)')" Text="Configured application icon was not found: $(ConfiguredApplicationIcon)" />
+    <Copy Condition="'$(ConfiguredApplicationIcon)' != 'Assets\app-icon.ico'"
+          SourceFiles="$(ConfiguredApplicationIcon)"
+          DestinationFiles="Assets\app-icon.ico"
+          SkipUnchangedFiles="true" />
+  </Target>
+
   <ItemGroup>
-    <None Remove="Assets\filebrowser.ico" />
-    <Content Include="Assets\filebrowser.ico" CopyToOutputDirectory="PreserveNewest" />
+    <None Remove="Assets\app-icon.ico" />
+    <Content Include="Assets\**\*.ico" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="Assets\**\*.png" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="Assets\**\*.jpg" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="Assets\**\*.jpeg" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="Assets\**\*.bmp" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="Assets\**\*.json" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="Assets\**\*.svg" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="..\server\install-filebrowser-localhost.sh" Link="server\install-filebrowser-localhost.sh" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.4022.49" />
+    <PackageReference Include="Avalonia" Version="12.0.4" />
+    <PackageReference Include="Avalonia.Controls.WebView" Version="12.0.1" />
+    <PackageReference Include="Avalonia.Desktop" Version="12.0.4" />
+    <PackageReference Include="Avalonia.Fonts.Inter" Version="12.0.4" />
+    <PackageReference Include="Avalonia.Themes.Fluent" Version="12.0.4" />
   </ItemGroup>
 
 </Project>

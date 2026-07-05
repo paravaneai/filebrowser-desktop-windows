@@ -26,13 +26,9 @@ internal sealed class SshTunnelService : IDisposable
             throw new InvalidOperationException($"{profile.LocalHost}:{profile.LocalPort} is already in use.");
         }
 
-        var sshPath = OperatingSystem.IsWindows()
-            ? "ssh.exe"
-            : "ssh";
-
         var startInfo = new ProcessStartInfo
         {
-            FileName = sshPath,
+            FileName = "ssh.exe",
             UseShellExecute = false,
             CreateNoWindow = true,
             RedirectStandardError = true,

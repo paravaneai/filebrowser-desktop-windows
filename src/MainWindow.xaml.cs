@@ -1,64 +1,373 @@
-using Microsoft.Web.WebView2.Core;
+using Avalonia;
+using Avalonia.Controls;
+using Avalonia.Input;
+using Avalonia.Layout;
+using Avalonia.Media;
+using Avalonia.Media.Imaging;
+using Avalonia.Platform;
+using Avalonia.Styling;
+using Avalonia.Threading;
 using System.IO;
-using System.Runtime.InteropServices;
 using System.Text.Json;
-using System.Windows;
-using System.Windows.Interop;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Threading;
 
 namespace FileBrowserDesktop;
 
-public partial class MainWindow : Window
+public sealed class MainWindow : Window
 {
     private readonly SshTunnelService _tunnel = new();
     private readonly ProfileStore _profileStore = ProfileStore.Load();
     private readonly CancellationTokenSource _shutdown = new();
+
+    private readonly ComboBox _profileComboBox = new();
+    private readonly Button _newProfileButton = new();
+    private readonly Button _editProfileButton = new();
+    private readonly Button _backButton = new();
+    private readonly Button _forwardButton = new();
+    private readonly Button _reloadButton = new();
+    private readonly Button _homeButton = new();
+    private readonly Button _settingsButton = new();
+    private readonly SettingsButtonConfig _settingsButtonConfig = SettingsButtonConfig.Load();
+    private readonly AppImageConfig _imageConfig = AppImageConfig.Load();
+    private readonly Button _reconnectButton = new();
+    private readonly TextBlock _addressText = new();
+    private readonly TextBlock _startupTitleText = new();
+    private readonly TextBlock _startupStatusText = new();
+    private readonly TextBlock _statusText = new();
+    private readonly Border _statusDot = new();
+    private readonly Border _topBar = new();
+    private readonly Border _statusBar = new();
+    private readonly Border _addressBox = new();
+    private readonly Border _startupOverlay = new();
+    private readonly Border _startupCard = new();
+    private readonly Grid _root = new();
+    private readonly Grid _contentGrid = new();
+    private readonly LayoutTransformControl _zoomHost = new();
+    private readonly SettingsPanel _settingsPanel = new();
+    private readonly SetupPage _setupPage;
+    private readonly Button _openSetupButton = new();
+    private readonly ProgressBar _startupProgress = new();
+    private NativeWebView? _browser;
+
     private ConnectionProfile? _activeProfile;
-    private bool _webViewReady;
     private bool _isDarkTheme;
+    private double _zoomScale = 1.0;
     private bool _suppressProfileSelectionChanged;
+    private bool _browserWasVisibleBeforeSetup;
+    private bool _browserWasVisibleBeforeSettings;
+    private bool _startupWasVisibleBeforeSetup;
+    private bool _settingsButtonIsHovered;
 
     public MainWindow()
     {
-        InitializeComponent();
-        SetWindowIcon();
-        ApplyTheme(false);
+        Title = "File Browser Desktop";
+        Width = 1180;
+        Height = 760;
+        MinWidth = 860;
+        MinHeight = 560;
+        WindowStartupLocation = WindowStartupLocation.CenterScreen;
+        _setupPage = new SetupPage(_imageConfig);
+        Icon = AssetImageLoader.TryLoadWindowIcon(_imageConfig.WindowIconFileName);
+        Content = BuildLayout();
+
+        _setupPage.SaveOpenRequested += SetupPage_SaveOpenRequested;
+        _setupPage.CancelRequested += SetupPage_CancelRequested;
+        _settingsPanel.CloseRequested += SettingsPanel_CloseRequested;
+        ApplySettings(AppSettingsStore.Current);
         SetChromeEnabled(false);
+        ShowLoadingScreen("Starting File Browser Desktop...");
+
+        AppSettingsStore.SettingsChanged += AppSettingsChanged;
+        Opened += async (_, _) =>
+        {
+            ApplyScreenAwarePlacement();
+            await OnOpenedAsync();
+        };
+        KeyDown += MainWindow_KeyDown;
+        Closing += (_, _) =>
+        {
+            AppSettingsStore.SettingsChanged -= AppSettingsChanged;
+            _setupPage.SaveOpenRequested -= SetupPage_SaveOpenRequested;
+            _setupPage.CancelRequested -= SetupPage_CancelRequested;
+            _settingsPanel.CloseRequested -= SettingsPanel_CloseRequested;
+            _shutdown.Cancel();
+            _browser?.Stop();
+            _tunnel.Dispose();
+        };
     }
 
-    private void Window_SourceInitialized(object? sender, EventArgs e)
+    private Control BuildLayout()
     {
-        ApplyNativeTitleBarTheme();
+        _root.RowDefinitions = new RowDefinitions("Auto,*,Auto");
+
+        _topBar.Child = BuildToolbar();
+        Grid.SetRow(_topBar, 0);
+        _root.Children.Add(_topBar);
+
+        _contentGrid.Background = BrushFor("#EEF3F8");
+
+        _startupOverlay.Child = BuildStartupOverlay();
+        _contentGrid.Children.Add(_startupOverlay);
+
+        _setupPage.HorizontalAlignment = HorizontalAlignment.Stretch;
+        _setupPage.VerticalAlignment = VerticalAlignment.Stretch;
+        _contentGrid.Children.Add(_setupPage);
+
+        Grid.SetRow(_contentGrid, 1);
+        _root.Children.Add(_contentGrid);
+
+        _statusBar.Child = BuildStatusBar();
+        Grid.SetRow(_statusBar, 2);
+        _root.Children.Add(_statusBar);
+
+        Grid.SetRowSpan(_settingsPanel, 3);
+        _settingsPanel.ZIndex = 100;
+        _root.Children.Add(_settingsPanel);
+
+        _zoomHost.Child = _root;
+        return _zoomHost;
     }
 
-    private async void Window_Loaded(object sender, RoutedEventArgs e)
+    private Control BuildToolbar()
+    {
+        var grid = new Grid
+        {
+            Margin = new Thickness(14, 10),
+            ColumnDefinitions = new ColumnDefinitions("Auto,Auto,Auto,Auto,Auto,Auto,Auto,*,Auto,Auto"),
+            VerticalAlignment = VerticalAlignment.Center,
+        };
+
+        _profileComboBox.Width = 180;
+        _profileComboBox.Height = 32;
+        _profileComboBox.MinHeight = 32;
+        _profileComboBox.Margin = new Thickness(0, 0, 6, 0);
+        _profileComboBox.Padding = new Thickness(10, 0);
+        _profileComboBox.VerticalAlignment = VerticalAlignment.Center;
+        _profileComboBox.VerticalContentAlignment = VerticalAlignment.Center;
+        _profileComboBox.SelectionChanged += async (_, _) => await ProfileSelectionChangedAsync();
+        AddToolbarChild(grid, _profileComboBox, 0);
+
+        ConfigureButton(_newProfileButton, "New", 54, UiButtonStyle.Primary);
+        _newProfileButton.Click += async (_, _) => await NewProfileAsync();
+        AddToolbarChild(grid, _newProfileButton, 1, new Thickness(0, 0, 6, 0));
+
+        ConfigureButton(_editProfileButton, "Edit", 52);
+        _editProfileButton.Click += async (_, _) => await EditProfileAsync();
+        AddToolbarChild(grid, _editProfileButton, 2, new Thickness(0, 0, 12, 0));
+
+        ConfigureButton(_backButton, "<", 38);
+        _backButton.Click += (_, _) =>
+        {
+            if (_browser?.CanGoBack == true)
+            {
+                _browser.GoBack();
+            }
+        };
+        AddToolbarChild(grid, _backButton, 3, new Thickness(0, 0, 6, 0));
+
+        ConfigureButton(_forwardButton, ">", 38);
+        _forwardButton.Click += (_, _) =>
+        {
+            if (_browser?.CanGoForward == true)
+            {
+                _browser.GoForward();
+            }
+        };
+        AddToolbarChild(grid, _forwardButton, 4, new Thickness(0, 0, 6, 0));
+
+        ConfigureButton(_reloadButton, "Reload", 72);
+        _reloadButton.Click += async (_, _) =>
+        {
+            _browser?.Refresh();
+            await TryPrefillFileBrowserCredentialsWithRetryAsync();
+        };
+        AddToolbarChild(grid, _reloadButton, 5, new Thickness(0, 0, 6, 0));
+
+        ConfigureButton(_homeButton, "Home", 64);
+        _homeButton.Click += (_, _) =>
+        {
+            if (_activeProfile is not null)
+            {
+                EnsureBrowser().Navigate(new Uri(_activeProfile.LocalUri));
+                _addressText.Text = _activeProfile.LocalUri;
+                _ = TryPrefillFileBrowserCredentialsWithRetryAsync();
+            }
+        };
+        AddToolbarChild(grid, _homeButton, 6, new Thickness(0, 0, 12, 0));
+
+        _addressBox.Height = 32;
+        _addressBox.CornerRadius = new CornerRadius(6);
+        _addressBox.BorderThickness = new Thickness(1);
+        _addressBox.VerticalAlignment = VerticalAlignment.Center;
+        _addressBox.Child = _addressText;
+        _addressText.Margin = new Thickness(10, 0);
+        _addressText.VerticalAlignment = VerticalAlignment.Center;
+        _addressText.TextTrimming = TextTrimming.CharacterEllipsis;
+        AddToolbarChild(grid, _addressBox, 7);
+
+        ConfigureButton(_reconnectButton, "Reconnect", 98);
+        _reconnectButton.Click += async (_, _) => await ReconnectAsync();
+        AddToolbarChild(grid, _reconnectButton, 8, new Thickness(12, 0, 0, 0));
+
+        ConfigureButton(_settingsButton, "", _settingsButtonConfig.ButtonSize);
+        _settingsButton.Width = _settingsButtonConfig.ButtonSize;
+        _settingsButton.Height = _settingsButtonConfig.ButtonSize;
+        RefreshSettingsButtonIcon();
+        ToolTip.SetTip(_settingsButton, "Settings");
+        _settingsButton.Click += (_, _) => ShowSettings();
+        _settingsButton.PointerEntered += (_, _) =>
+        {
+            _settingsButtonIsHovered = true;
+            ApplySettingsIconSize();
+        };
+        _settingsButton.PointerExited += (_, _) =>
+        {
+            _settingsButtonIsHovered = false;
+            ApplySettingsIconSize();
+        };
+        AddToolbarChild(grid, _settingsButton, 9, new Thickness(12, 0, 0, 0));
+
+        return grid;
+    }
+
+    private Control BuildStartupOverlay()
+    {
+        var panel = new StackPanel
+        {
+            Width = 460,
+            HorizontalAlignment = HorizontalAlignment.Center,
+            VerticalAlignment = VerticalAlignment.Center,
+        };
+
+        var startupLogo = AssetImageLoader.CreateImage(_imageConfig.StartupLogoFileName, _imageConfig.StartupLogoSize, _imageConfig.StartupLogoSize);
+        startupLogo.Margin = new Thickness(0, 0, 0, 16);
+        startupLogo.HorizontalAlignment = HorizontalAlignment.Center;
+        panel.Children.Add(startupLogo);
+
+        _startupTitleText.Text = "File Browser Desktop";
+        _startupTitleText.FontSize = 30;
+        _startupTitleText.FontWeight = FontWeight.SemiBold;
+        _startupTitleText.HorizontalAlignment = HorizontalAlignment.Center;
+        panel.Children.Add(_startupTitleText);
+
+        _startupStatusText.Margin = new Thickness(0, 14, 0, 0);
+        _startupStatusText.Text = "Starting SSH tunnel...";
+        _startupStatusText.FontSize = 15;
+        _startupStatusText.TextAlignment = TextAlignment.Center;
+        _startupStatusText.TextWrapping = TextWrapping.Wrap;
+        panel.Children.Add(_startupStatusText);
+
+        _startupProgress.Margin = new Thickness(0, 22, 0, 0);
+        _startupProgress.Height = 6;
+        _startupProgress.IsIndeterminate = true;
+        panel.Children.Add(_startupProgress);
+
+        ConfigureButton(_openSetupButton, "Open setup", 128, UiButtonStyle.Primary);
+        _openSetupButton.HorizontalAlignment = HorizontalAlignment.Center;
+        _openSetupButton.Margin = new Thickness(0, 22, 0, 0);
+        _openSetupButton.IsVisible = false;
+        _openSetupButton.Click += async (_, _) => await NewProfileAsync();
+        panel.Children.Add(_openSetupButton);
+
+        _startupCard.Width = 560;
+        _startupCard.Padding = new Thickness(38, 34);
+        _startupCard.CornerRadius = new CornerRadius(16);
+        _startupCard.BorderThickness = new Thickness(1);
+        _startupCard.HorizontalAlignment = HorizontalAlignment.Center;
+        _startupCard.VerticalAlignment = VerticalAlignment.Center;
+        _startupCard.Child = panel;
+        return _startupCard;
+    }
+
+    private Control BuildStatusBar()
+    {
+        var panel = new StackPanel
+        {
+            Orientation = Orientation.Horizontal,
+            Margin = new Thickness(12, 7),
+            VerticalAlignment = VerticalAlignment.Center,
+        };
+
+        _statusDot.Width = 9;
+        _statusDot.Height = 9;
+        _statusDot.CornerRadius = new CornerRadius(5);
+        _statusDot.Margin = new Thickness(0, 0, 8, 0);
+        _statusDot.VerticalAlignment = VerticalAlignment.Center;
+        panel.Children.Add(_statusDot);
+
+        _statusText.FontSize = 12;
+        _statusText.VerticalAlignment = VerticalAlignment.Center;
+        _statusText.Text = "Starting...";
+        panel.Children.Add(_statusText);
+
+        return panel;
+    }
+
+    private async Task OnOpenedAsync()
     {
         LoadProfilesIntoComboBox();
 
         if (_profileStore.Profiles.Count == 0)
         {
-            if (!CreateProfileFromWizard())
-            {
-                ShowNoProfileScreen();
-                return;
-            }
+            ShowSetupPageForNewProfile();
+            return;
         }
 
         await StartSelectedProfileAsync("Starting SSH tunnel...");
     }
 
-    private void Window_Closing(object? sender, System.ComponentModel.CancelEventArgs e)
+    private void ApplyScreenAwarePlacement()
     {
-        _shutdown.Cancel();
-        Browser.Dispose();
-        _tunnel.Dispose();
+        var screen = Screens.ScreenFromWindow(this) ?? Screens.Primary;
+        if (screen is null)
+        {
+            return;
+        }
+
+        var scale = screen.Scaling > 0 ? screen.Scaling : 1;
+        var workingArea = screen.WorkingArea;
+        var availableWidth = workingArea.Width / scale;
+        var availableHeight = workingArea.Height / scale;
+
+        var targetWidth = FitToScreen(availableWidth, preferredRatio: 0.82, defaultSize: 1180, minimumSize: 860, maximumSize: 1400, padding: 48);
+        var targetHeight = FitToScreen(availableHeight, preferredRatio: 0.84, defaultSize: 760, minimumSize: 560, maximumSize: 920, padding: 72);
+
+        MinWidth = Math.Min(860, targetWidth);
+        MinHeight = Math.Min(560, targetHeight);
+        Width = targetWidth;
+        Height = targetHeight;
+
+        CenterOnScreen(screen);
+    }
+
+    private void CenterOnScreen(Screen screen)
+    {
+        var scale = screen.Scaling > 0 ? screen.Scaling : 1;
+        var workingArea = screen.WorkingArea;
+        var windowWidth = (int)Math.Round(Width * scale);
+        var windowHeight = (int)Math.Round(Height * scale);
+        var x = workingArea.X + Math.Max(0, (workingArea.Width - windowWidth) / 2);
+        var y = workingArea.Y + Math.Max(0, (workingArea.Height - windowHeight) / 2);
+
+        Position = new PixelPoint(x, y);
+    }
+
+    private static double FitToScreen(
+        double available,
+        double preferredRatio,
+        double defaultSize,
+        double minimumSize,
+        double maximumSize,
+        double padding)
+    {
+        var upper = Math.Max(320, Math.Min(maximumSize, available - padding));
+        var lower = Math.Min(minimumSize, upper);
+        var preferred = Math.Max(defaultSize, available * preferredRatio);
+        return Math.Clamp(preferred, lower, upper);
     }
 
     private async Task StartSelectedProfileAsync(string message)
     {
-        var profile = ProfileComboBox.SelectedItem as ConnectionProfile ?? _profileStore.GetSelectedProfile();
+        var profile = _profileComboBox.SelectedItem as ConnectionProfile ?? _profileStore.GetSelectedProfile();
         if (profile is null)
         {
             ShowNoProfileScreen();
@@ -71,75 +380,39 @@ public partial class MainWindow : Window
         {
             ShowLoadingScreen($"{message}\n{profile.Name}");
             SetChromeEnabled(false);
-            ReconnectButton.IsEnabled = false;
-            EditProfileButton.IsEnabled = false;
+            _reconnectButton.IsEnabled = false;
+            _editProfileButton.IsEnabled = false;
 
             await _tunnel.StartAsync(profile, _shutdown.Token);
 
             SetStatus("Tunnel connected. Loading File Browser...", "#22C55E");
-            StartupStatusText.Text = $"Tunnel connected. Loading File Browser for {profile.Name}...";
+            _startupStatusText.Text = $"Tunnel connected. Loading File Browser for {profile.Name}...";
 
-            await InitializeWebViewAsync();
-            Browser.Source = new Uri(profile.LocalUri);
-            AddressText.Text = profile.LocalUri;
+            _addressText.Text = profile.LocalUri;
+            EnsureBrowser().Source = new Uri(profile.LocalUri);
+
+            await Dispatcher.UIThread.InvokeAsync(async () =>
+            {
+                await Task.Delay(1200, _shutdown.Token);
+                ShowBrowser();
+                await TryPrefillFileBrowserCredentialsWithRetryAsync();
+            });
         }
         catch (Exception ex)
         {
             SetStatus("Connection failed", "#EF4444");
-            StartupStatusText.Text = ex.Message;
-            StartupOverlay.Visibility = Visibility.Visible;
-            Browser.Visibility = Visibility.Hidden;
+            _startupStatusText.Text = ex.Message;
+            _startupOverlay.IsVisible = true;
+            HideBrowser();
             SetChromeEnabled(true);
-            ReconnectButton.IsEnabled = true;
-            EditProfileButton.IsEnabled = true;
+            _reconnectButton.IsEnabled = true;
+            _editProfileButton.IsEnabled = true;
         }
     }
 
-    private async Task InitializeWebViewAsync()
+    private async Task ProfileSelectionChangedAsync()
     {
-        if (_webViewReady)
-        {
-            return;
-        }
-
-        var userDataFolder = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "FileBrowserDesktop",
-            "WebView2");
-
-        Directory.CreateDirectory(userDataFolder);
-
-        try
-        {
-            var environment = await CoreWebView2Environment.CreateAsync(null, userDataFolder);
-            await Browser.EnsureCoreWebView2Async(environment);
-        }
-        catch (WebView2RuntimeNotFoundException ex)
-        {
-            throw new InvalidOperationException(
-                "Microsoft Edge WebView2 Runtime is not installed. Install it from https://developer.microsoft.com/microsoft-edge/webview2/",
-                ex);
-        }
-
-        Browser.CoreWebView2.Settings.AreDefaultContextMenusEnabled = true;
-#if DEBUG
-        Browser.CoreWebView2.Settings.AreDevToolsEnabled = true;
-#else
-        Browser.CoreWebView2.Settings.AreDevToolsEnabled = false;
-#endif
-        Browser.CoreWebView2.DocumentTitleChanged += (_, _) =>
-        {
-            Title = string.IsNullOrWhiteSpace(Browser.CoreWebView2.DocumentTitle)
-                ? "File Browser Desktop"
-                : $"{Browser.CoreWebView2.DocumentTitle} - File Browser Desktop";
-        };
-
-        _webViewReady = true;
-    }
-
-    private async void ProfileComboBox_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
-    {
-        if (_suppressProfileSelectionChanged || ProfileComboBox.SelectedItem is not ConnectionProfile profile)
+        if (_suppressProfileSelectionChanged || _profileComboBox.SelectedItem is not ConnectionProfile profile)
         {
             return;
         }
@@ -148,170 +421,151 @@ public partial class MainWindow : Window
         _profileStore.Save();
 
         ShowLoadingScreen($"Switching to {profile.Name}...");
-        await Dispatcher.Yield(DispatcherPriority.Render);
+        await Dispatcher.UIThread.InvokeAsync(() => { }, DispatcherPriority.Render);
         _tunnel.Stop();
         await StartSelectedProfileAsync("Starting SSH tunnel...");
     }
 
-    private async void NewProfileButton_Click(object sender, RoutedEventArgs e)
+    private async Task NewProfileAsync()
     {
-        if (!CreateProfileFromWizard())
-        {
-            return;
-        }
-
-        await StartSelectedProfileAsync("Starting SSH tunnel...");
+        ShowSetupPageForNewProfile();
+        await Task.CompletedTask;
     }
 
-    private async void EditProfileButton_Click(object sender, RoutedEventArgs e)
+    private async Task EditProfileAsync()
     {
-        if (ProfileComboBox.SelectedItem is not ConnectionProfile selected)
+        if (_profileComboBox.SelectedItem is not ConnectionProfile selected)
         {
             return;
         }
 
-        var editor = new ProfileEditorWindow(selected)
-        {
-            Owner = this,
-        };
-
-        if (editor.ShowDialog() != true)
-        {
-            return;
-        }
-
-        var index = _profileStore.Profiles.FindIndex(profile => profile.Id == selected.Id);
-        if (index >= 0)
-        {
-            _profileStore.Profiles[index] = editor.Profile;
-            _profileStore.SelectedProfileId = editor.Profile.Id;
-            _profileStore.Save();
-            LoadProfilesIntoComboBox();
-
-            ShowLoadingScreen($"Restarting {editor.Profile.Name}...");
-            await Dispatcher.Yield(DispatcherPriority.Render);
-            _tunnel.Stop();
-            await StartSelectedProfileAsync("Starting SSH tunnel...");
-        }
+        ShowSetupPageForEditProfile(selected);
+        await Task.CompletedTask;
     }
 
-    private async void ReconnectButton_Click(object sender, RoutedEventArgs e)
+    private async Task ReconnectAsync()
     {
-        if (_activeProfile is null)
+        if (_activeProfile is null && _profileStore.Profiles.Count == 0)
         {
-            if (!CreateProfileFromWizard())
-            {
-                return;
-            }
+            ShowSetupPageForNewProfile();
+            return;
         }
 
         ShowLoadingScreen("Restarting SSH tunnel...");
-        await Dispatcher.Yield(DispatcherPriority.Render);
+        await Dispatcher.UIThread.InvokeAsync(() => { }, DispatcherPriority.Render);
         _tunnel.Stop();
         await StartSelectedProfileAsync("Starting SSH tunnel...");
     }
 
-    private void BackButton_Click(object sender, RoutedEventArgs e)
+    private void ShowSettings()
     {
-        if (Browser.CanGoBack)
+        _browserWasVisibleBeforeSettings = _browser?.IsVisible == true;
+        HideBrowser();
+        _settingsPanel.Show();
+    }
+
+    private void SettingsPanel_CloseRequested(object? sender, EventArgs e)
+    {
+        if (_browserWasVisibleBeforeSettings && _activeProfile is not null && !_setupPage.IsVisible && !_startupOverlay.IsVisible)
         {
-            Browser.GoBack();
-        }
-    }
-
-    private void ForwardButton_Click(object sender, RoutedEventArgs e)
-    {
-        if (Browser.CanGoForward)
-        {
-            Browser.GoForward();
-        }
-    }
-
-    private void ReloadButton_Click(object sender, RoutedEventArgs e)
-    {
-        Browser.Reload();
-    }
-
-    private void HomeButton_Click(object sender, RoutedEventArgs e)
-    {
-        if (_activeProfile is not null)
-        {
-            Browser.Source = new Uri(_activeProfile.LocalUri);
-        }
-    }
-
-    private void ThemeToggleButton_Checked(object sender, RoutedEventArgs e)
-    {
-        ApplyTheme(true);
-    }
-
-    private void ThemeToggleButton_Unchecked(object sender, RoutedEventArgs e)
-    {
-        ApplyTheme(false);
-    }
-
-    private void Browser_NavigationStarting(object? sender, CoreWebView2NavigationStartingEventArgs e)
-    {
-        AddressText.Text = e.Uri;
-        SetStatus("Loading...", "#F59E0B");
-    }
-
-    private void Browser_NavigationCompleted(object? sender, CoreWebView2NavigationCompletedEventArgs e)
-    {
-        Browser.Visibility = Visibility.Visible;
-        StartupOverlay.Visibility = Visibility.Collapsed;
-        SetStatus(e.IsSuccess ? "Connected" : $"Navigation failed: {e.WebErrorStatus}", e.IsSuccess ? "#22C55E" : "#EF4444");
-        SetChromeEnabled(true);
-        ReconnectButton.IsEnabled = true;
-        EditProfileButton.IsEnabled = ProfileComboBox.SelectedItem is ConnectionProfile;
-
-        if (e.IsSuccess)
-        {
-            _ = TryPrefillFileBrowserCredentialsAsync();
-        }
-    }
-
-    private bool CreateProfileFromDialog()
-    {
-        var profile = new ConnectionProfile
-        {
-            Name = $"Server {_profileStore.Profiles.Count + 1}",
-        };
-
-        var editor = new ProfileEditorWindow(profile)
-        {
-            Owner = this,
-        };
-
-        if (editor.ShowDialog() != true)
-        {
-            return false;
+            ShowBrowser();
         }
 
-        _profileStore.Profiles.Add(editor.Profile);
-        _profileStore.SelectedProfileId = editor.Profile.Id;
+        _browserWasVisibleBeforeSettings = false;
+    }
+
+    private void ShowSetupPageForNewProfile()
+    {
+        CapturePreSetupView();
+        _setupPage.StartNewProfile();
+        ShowSetupPage("Setup: New connection profile");
+    }
+
+    private void ShowSetupPageForEditProfile(ConnectionProfile profile)
+    {
+        CapturePreSetupView();
+        _setupPage.EditProfile(profile);
+        ShowSetupPage($"Setup: {profile.Name}");
+    }
+
+    private void CapturePreSetupView()
+    {
+        _browserWasVisibleBeforeSetup = _browser?.IsVisible == true;
+        _startupWasVisibleBeforeSetup = _startupOverlay.IsVisible;
+    }
+
+    private void ShowSetupPage(string addressText)
+    {
+        HideBrowser();
+        _startupOverlay.IsVisible = false;
+        _setupPage.IsVisible = true;
+        _startupProgress.IsVisible = false;
+        _openSetupButton.IsVisible = false;
+        _addressText.Text = addressText;
+        SetStatus("Editing setup", "#3B82F6");
+        SetChromeEnabled(false);
+        SetSetupToolbarMode(true);
+        _profileComboBox.IsEnabled = false;
+        _newProfileButton.IsEnabled = false;
+        _editProfileButton.IsEnabled = false;
+        _reconnectButton.IsEnabled = false;
+        _setupPage.Focus();
+    }
+
+    private async void SetupPage_SaveOpenRequested(object? sender, SetupProfileEventArgs e)
+    {
+        var index = _profileStore.Profiles.FindIndex(profile => profile.Id == e.Profile.Id);
+        if (index >= 0)
+        {
+            _profileStore.Profiles[index] = e.Profile;
+        }
+        else
+        {
+            _profileStore.Profiles.Add(e.Profile);
+        }
+
+        _profileStore.SelectedProfileId = e.Profile.Id;
         _profileStore.Save();
         LoadProfilesIntoComboBox();
-        return true;
+
+        ShowLoadingScreen($"Starting {e.Profile.Name}...");
+        await Dispatcher.UIThread.InvokeAsync(() => { }, DispatcherPriority.Render);
+        _tunnel.Stop();
+        await StartSelectedProfileAsync("Starting SSH tunnel...");
     }
 
-    private bool CreateProfileFromWizard()
+    private void SetupPage_CancelRequested(object? sender, EventArgs e)
     {
-        var wizard = new OnboardingWizardWindow
-        {
-            Owner = this,
-        };
+        _setupPage.IsVisible = false;
+        _profileComboBox.IsEnabled = true;
+        _newProfileButton.IsEnabled = true;
+        SetSetupToolbarMode(false);
 
-        if (wizard.ShowDialog() != true || wizard.Profile is null)
+        if (_profileStore.Profiles.Count == 0)
         {
-            return false;
+            ShowNoProfileScreen();
+            return;
         }
 
-        _profileStore.Profiles.Add(wizard.Profile);
-        _profileStore.SelectedProfileId = wizard.Profile.Id;
-        _profileStore.Save();
-        LoadProfilesIntoComboBox();
-        return true;
+        if (_browserWasVisibleBeforeSetup && _activeProfile is not null)
+        {
+            ShowBrowser();
+            _addressText.Text = _activeProfile.LocalUri;
+            return;
+        }
+
+        if (_startupWasVisibleBeforeSetup)
+        {
+            _startupOverlay.IsVisible = true;
+            HideBrowser();
+            _setupPage.IsVisible = false;
+            SetSetupToolbarMode(false);
+            _editProfileButton.IsEnabled = _profileComboBox.SelectedItem is ConnectionProfile;
+            _reconnectButton.IsEnabled = _profileComboBox.SelectedItem is ConnectionProfile;
+            return;
+        }
+
+        ShowNoProfileScreen();
     }
 
     private void LoadProfilesIntoComboBox()
@@ -319,14 +573,15 @@ public partial class MainWindow : Window
         _suppressProfileSelectionChanged = true;
         try
         {
-            ProfileComboBox.ItemsSource = null;
-            ProfileComboBox.ItemsSource = _profileStore.Profiles;
-            ProfileComboBox.DisplayMemberPath = nameof(ConnectionProfile.Name);
-            ProfileComboBox.SelectedItem = _profileStore.GetSelectedProfile();
+            _profileComboBox.ItemsSource = null;
+            _profileComboBox.ItemsSource = _profileStore.Profiles;
+            _profileComboBox.SelectedItem = _profileStore.GetSelectedProfile();
 
-            var hasProfile = ProfileComboBox.SelectedItem is ConnectionProfile;
-            EditProfileButton.IsEnabled = hasProfile;
-            ReconnectButton.IsEnabled = hasProfile;
+            var hasProfile = _profileComboBox.SelectedItem is ConnectionProfile;
+            _profileComboBox.IsEnabled = true;
+            _newProfileButton.IsEnabled = true;
+            _editProfileButton.IsEnabled = hasProfile;
+            _reconnectButton.IsEnabled = hasProfile;
         }
         finally
         {
@@ -339,61 +594,120 @@ public partial class MainWindow : Window
         _activeProfile = null;
         _tunnel.Stop();
         SetStatus("No connection profile configured", "#F59E0B");
-        StartupStatusText.Text = "Create a connection profile to start. Profiles store only SSH host, ports, and tunnel settings.";
-        StartupOverlay.Visibility = Visibility.Visible;
-        Browser.Visibility = Visibility.Hidden;
-        AddressText.Text = "";
+        _startupStatusText.Text = "No connection profile is configured. Open setup to create a private SSH tunnel profile.";
+        _startupOverlay.IsVisible = true;
+        HideBrowser();
+        _setupPage.IsVisible = false;
+        _startupProgress.IsVisible = false;
+        _openSetupButton.IsVisible = true;
+        _addressText.Text = "";
+        _profileComboBox.IsEnabled = true;
+        _newProfileButton.IsEnabled = true;
+        SetSetupToolbarMode(false);
         SetChromeEnabled(false);
-        EditProfileButton.IsEnabled = false;
-        ReconnectButton.IsEnabled = false;
+        _editProfileButton.IsEnabled = false;
+        _reconnectButton.IsEnabled = false;
+    }
+
+    private void ShowBrowser()
+    {
+        EnsureBrowser().IsVisible = true;
+        _startupOverlay.IsVisible = false;
+        _setupPage.IsVisible = false;
+        _startupProgress.IsVisible = false;
+        _openSetupButton.IsVisible = false;
+        SetStatus("Connected", "#22C55E");
+        _profileComboBox.IsEnabled = true;
+        _newProfileButton.IsEnabled = true;
+        SetSetupToolbarMode(false);
+        SetChromeEnabled(true);
+        _reconnectButton.IsEnabled = true;
+        _editProfileButton.IsEnabled = _profileComboBox.SelectedItem is ConnectionProfile;
+    }
+
+    private NativeWebView EnsureBrowser()
+    {
+        if (_browser is not null)
+        {
+            return _browser;
+        }
+
+        _browser = new NativeWebView
+        {
+            HorizontalAlignment = HorizontalAlignment.Stretch,
+            VerticalAlignment = VerticalAlignment.Stretch,
+            IsVisible = false,
+        };
+
+        _contentGrid.Children.Insert(0, _browser);
+        return _browser;
+    }
+
+    private void HideBrowser()
+    {
+        if (_browser is not null)
+        {
+            _browser.IsVisible = false;
+        }
     }
 
     private void SetChromeEnabled(bool enabled)
     {
-        BackButton.IsEnabled = enabled && Browser.CanGoBack;
-        ForwardButton.IsEnabled = enabled && Browser.CanGoForward;
-        ReloadButton.IsEnabled = enabled;
-        HomeButton.IsEnabled = enabled && _activeProfile is not null;
+        _backButton.IsEnabled = enabled && _browser?.CanGoBack == true;
+        _forwardButton.IsEnabled = enabled && _browser?.CanGoForward == true;
+        _reloadButton.IsEnabled = enabled;
+        _homeButton.IsEnabled = enabled && _activeProfile is not null;
+    }
+
+    private void SetSetupToolbarMode(bool setupMode)
+    {
+        _profileComboBox.IsVisible = !setupMode;
+        _newProfileButton.IsVisible = !setupMode;
+        _editProfileButton.IsVisible = !setupMode;
+        _backButton.IsVisible = !setupMode;
+        _forwardButton.IsVisible = !setupMode;
+        _reloadButton.IsVisible = !setupMode;
+        _homeButton.IsVisible = !setupMode;
+        _reconnectButton.IsVisible = !setupMode;
     }
 
     private void SetStatus(string text, string color)
     {
-        StatusText.Text = text;
-        StatusDot.Fill = BrushFor(color);
+        _statusText.Text = text;
+        _statusDot.Background = BrushFor(color);
     }
 
-    private void SetWindowIcon()
+    private void ShowLoadingScreen(string message)
     {
-        var iconPath = Path.Combine(AppContext.BaseDirectory, "Assets", "filebrowser.ico");
-        if (!File.Exists(iconPath))
-        {
-            iconPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Assets", "filebrowser.ico");
-        }
+        SetStatus("Starting SSH tunnel...", "#F59E0B");
+        _startupStatusText.Text = message;
+        HideBrowser();
+        _startupOverlay.IsVisible = true;
+        _setupPage.IsVisible = false;
+        _startupProgress.IsVisible = true;
+        _openSetupButton.IsVisible = false;
+        _profileComboBox.IsEnabled = true;
+        _newProfileButton.IsEnabled = true;
+        SetSetupToolbarMode(false);
+    }
 
-        if (File.Exists(iconPath))
-        {
-            Icon = BitmapFrame.Create(new Uri(iconPath, UriKind.Absolute));
-        }
+    private void ApplySettings(AppSettings settings)
+    {
+        ApplyTheme(settings.DarkTheme);
+        ApplyZoom(settings.ZoomScale);
+    }
+
+    private void AppSettingsChanged(object? sender, AppSettings settings)
+    {
+        ApplySettings(settings);
     }
 
     private void ApplyTheme(bool dark)
     {
         _isDarkTheme = dark;
+        RequestedThemeVariant = dark ? ThemeVariant.Dark : ThemeVariant.Light;
 
-        SetThemeResource("PrimaryTextBrush", dark ? "#F8FAFC" : "#111827");
-        SetThemeResource("DisabledTextBrush", dark ? "#8EA0B8" : "#94A3B8");
-        SetThemeResource("ControlBackgroundBrush", dark ? "#172033" : "#F2F4F7");
-        SetThemeResource("ControlHoverBackgroundBrush", dark ? "#22304A" : "#E7ECF3");
-        SetThemeResource("ControlPressedBackgroundBrush", dark ? "#2C3A56" : "#DCE4EF");
-        SetThemeResource("ControlBorderBrush", dark ? "#40516D" : "#D4DAE4");
-        SetThemeResource("DisabledBackgroundBrush", dark ? "#111827" : "#EEF2F7");
-        SetThemeResource("DisabledBorderBrush", dark ? "#263246" : "#DCE3EC");
-        SetThemeResource("SwitchBackgroundBrush", dark ? "#334155" : "#D7DEE8");
-        SetThemeResource("SwitchCheckedBackgroundBrush", "#2563EB");
-        SetThemeResource("SwitchThumbBrush", dark ? "#E0F2FE" : "#FFFFFF");
-        SetThemeResource("SwitchHoverBorderBrush", dark ? "#60A5FA" : "#93C5FD");
-
-        var windowBackground = BrushFor(dark ? "#101820" : "#F6F7F9");
+        var windowBackground = BrushFor(dark ? "#101820" : "#EEF3F8");
         var surface = BrushFor(dark ? "#0B1120" : "#FFFFFF");
         var elevated = BrushFor(dark ? "#172033" : "#F2F4F7");
         var border = BrushFor(dark ? "#2E3B52" : "#D8DEE8");
@@ -403,88 +717,91 @@ public partial class MainWindow : Window
         var addressText = BrushFor(dark ? "#E2E8F0" : "#334155");
 
         Background = windowBackground;
-        RootGrid.Background = windowBackground;
-        TopBar.Background = surface;
-        TopBar.BorderBrush = border;
-        StatusBar.Background = surface;
-        StatusBar.BorderBrush = border;
-        StartupOverlay.Background = windowBackground;
-        AddressBox.Background = elevated;
-        AddressBox.BorderBrush = innerBorder;
+        _root.Background = windowBackground;
+        _contentGrid.Background = windowBackground;
+        _topBar.Background = surface;
+        _topBar.BorderBrush = border;
+        _topBar.BorderThickness = new Thickness(0, 0, 0, 1);
+        _statusBar.Background = surface;
+        _statusBar.BorderBrush = border;
+        _statusBar.BorderThickness = new Thickness(0, 1, 0, 0);
+        _startupOverlay.Background = windowBackground;
+        _startupCard.Background = BrushFor(dark ? "#0F172A" : "#FFFFFF");
+        _startupCard.BorderBrush = BrushFor(dark ? "#334155" : "#D9E2EF");
+        _addressBox.Background = elevated;
+        _addressBox.BorderBrush = innerBorder;
+        _startupTitleText.Foreground = primaryText;
+        _startupStatusText.Foreground = secondaryText;
+        _addressText.Foreground = addressText;
+        _statusText.Foreground = secondaryText;
 
-        StartupTitleText.Foreground = primaryText;
-        StartupStatusText.Foreground = secondaryText;
-        AddressText.Foreground = addressText;
-        StatusText.Foreground = secondaryText;
-        ProfileComboBox.Background = elevated;
-        ProfileComboBox.BorderBrush = innerBorder;
-        ProfileComboBox.Foreground = primaryText;
-
-        ApplyNativeTitleBarTheme();
+        ApplyButtonTheme(_newProfileButton, primary: true);
+        ApplyButtonTheme(_openSetupButton, primary: true);
+        ApplyButtonTheme(_editProfileButton, primary: false);
+        ApplyButtonTheme(_backButton, primary: false);
+        ApplyButtonTheme(_forwardButton, primary: false);
+        ApplyButtonTheme(_reloadButton, primary: false);
+        ApplyButtonTheme(_homeButton, primary: false);
+        ApplyButtonTheme(_settingsButton, primary: false);
+        ApplyButtonTheme(_reconnectButton, primary: false);
+        ApplySettingsButtonConfig();
     }
 
-    private void ShowLoadingScreen(string message)
+    private void ApplyZoom(double zoomScale)
     {
-        SetStatus("Starting SSH tunnel...", "#F59E0B");
-        StartupStatusText.Text = message;
-        Browser.Visibility = Visibility.Hidden;
-        StartupOverlay.Visibility = Visibility.Visible;
-        StartupOverlay.Background = BrushFor(_isDarkTheme ? "#101820" : "#F6F7F9");
+        _zoomScale = AppSettings.ClampZoom(zoomScale);
+        _zoomHost.LayoutTransform = new ScaleTransform(_zoomScale, _zoomScale);
     }
 
-    private void SetThemeResource(string key, string color)
+    private void MainWindow_KeyDown(object? sender, KeyEventArgs e)
     {
-        Resources[key] = BrushFor(color);
-    }
-
-    private void ApplyNativeTitleBarTheme()
-    {
-        var handle = new WindowInteropHelper(this).Handle;
-        if (handle == IntPtr.Zero)
+        if (!e.KeyModifiers.HasFlag(KeyModifiers.Control))
         {
             return;
         }
 
-        try
+        if (e.Key is Key.Add or Key.OemPlus)
         {
-            var useDark = _isDarkTheme ? 1 : 0;
-            _ = DwmSetWindowAttribute(handle, DwmUseImmersiveDarkMode, ref useDark, sizeof(int));
-
-            var captionColor = _isDarkTheme ? ToColorRef(11, 17, 32) : ToColorRef(246, 247, 249);
-            var textColor = _isDarkTheme ? ToColorRef(248, 250, 252) : ToColorRef(17, 24, 39);
-            var borderColor = _isDarkTheme ? ToColorRef(46, 59, 82) : ToColorRef(216, 222, 232);
-
-            _ = DwmSetWindowAttribute(handle, DwmCaptionColor, ref captionColor, sizeof(int));
-            _ = DwmSetWindowAttribute(handle, DwmTextColor, ref textColor, sizeof(int));
-            _ = DwmSetWindowAttribute(handle, DwmBorderColor, ref borderColor, sizeof(int));
+            AppSettingsStore.AdjustZoom(0.1);
+            e.Handled = true;
         }
-        catch
+        else if (e.Key is Key.Subtract or Key.OemMinus)
         {
-            // Older Windows builds may ignore these DWM attributes.
+            AppSettingsStore.AdjustZoom(-0.1);
+            e.Handled = true;
+        }
+        else if (e.Key is Key.D0 or Key.NumPad0)
+        {
+            AppSettingsStore.ResetZoom();
+            e.Handled = true;
         }
     }
 
-    private static Brush BrushFor(string color)
+    private async Task TryPrefillFileBrowserCredentialsWithRetryAsync()
     {
-        return (Brush)new BrushConverter().ConvertFromString(color)!;
+        for (var attempt = 0; attempt < 12; attempt++)
+        {
+            if (_shutdown.IsCancellationRequested || _browser is null || !_browser.IsVisible)
+            {
+                return;
+            }
+
+            await TryPrefillFileBrowserCredentialsAsync();
+
+            try
+            {
+                await Task.Delay(500, _shutdown.Token);
+            }
+            catch (OperationCanceledException)
+            {
+                return;
+            }
+        }
     }
-
-    private static int ToColorRef(byte red, byte green, byte blue)
-    {
-        return red | (green << 8) | (blue << 16);
-    }
-
-    private const int DwmUseImmersiveDarkMode = 20;
-    private const int DwmBorderColor = 34;
-    private const int DwmCaptionColor = 35;
-    private const int DwmTextColor = 36;
-
-    [DllImport("dwmapi.dll", PreserveSig = true)]
-    private static extern int DwmSetWindowAttribute(IntPtr hwnd, int attribute, ref int attributeValue, int attributeSize);
 
     private async Task TryPrefillFileBrowserCredentialsAsync()
     {
-        if (_activeProfile is null || Browser.CoreWebView2 is null)
+        if (_activeProfile is null || !CredentialManager.IsSupported)
         {
             return;
         }
@@ -510,29 +827,17 @@ public partial class MainWindow : Window
             (() => {
               const username = {{username}};
               const password = {{password}};
-
-              const passwordInput =
-                document.querySelector('input[type="password"]') ||
-                document.querySelector('input[name="password"]') ||
-                document.querySelector('#password');
-
+              const passwordInput = document.querySelector('input[type="password"]') || document.querySelector('input[name="password"]') || document.querySelector('#password');
               if (!passwordInput) return false;
-
-              const usernameInput =
-                document.querySelector('input[name="username"]') ||
-                document.querySelector('#username') ||
-                document.querySelector('input[type="text"]') ||
-                document.querySelector('input:not([type])');
-
+              const usernameInput = document.querySelector('input[name="username"]') || document.querySelector('input[name="user"]') || document.querySelector('#username') || document.querySelector('#user') || document.querySelector('input[type="text"]') || document.querySelector('input:not([type])');
               if (!usernameInput) return false;
-
               const setValue = (input, value) => {
                 input.focus();
                 input.value = value;
                 input.dispatchEvent(new Event('input', { bubbles: true }));
                 input.dispatchEvent(new Event('change', { bubbles: true }));
+                input.dispatchEvent(new KeyboardEvent('keyup', { bubbles: true }));
               };
-
               setValue(usernameInput, username);
               setValue(passwordInput, password);
               return true;
@@ -541,11 +846,84 @@ public partial class MainWindow : Window
 
         try
         {
-            await Browser.CoreWebView2.ExecuteScriptAsync(script);
+            if (_browser is not null)
+            {
+                await _browser.InvokeScript(script);
+            }
         }
         catch
         {
-            // The page may not be the File Browser login page yet.
+            // Platform WebView may not be ready or the page may not be the login form.
         }
     }
+
+    private static void ConfigureButton(Button button, string content, double minWidth, UiButtonStyle style = UiButtonStyle.Neutral)
+    {
+        UiTheme.ConfigureToolbarButton(button, content, minWidth, style);
+    }
+
+    private void ApplyButtonTheme(Button button, bool primary)
+    {
+        UiTheme.ApplyButtonTheme(button, primary ? UiButtonStyle.Primary : UiButtonStyle.Neutral, _isDarkTheme);
+    }
+
+    private void ApplySettingsButtonConfig()
+    {
+        RefreshSettingsButtonIcon();
+
+        if (_settingsButtonConfig.RemoveButtonBorder)
+        {
+            _settingsButton.BorderThickness = new Thickness(0);
+            _settingsButton.BorderBrush = Brushes.Transparent;
+        }
+
+        if (_settingsButtonConfig.RemoveButtonBackground)
+        {
+            _settingsButton.Background = Brushes.Transparent;
+        }
+
+        ApplySettingsIconSize();
+    }
+
+    private void RefreshSettingsButtonIcon()
+    {
+        _settingsButton.Content = AssetIconLoader.CreateSettingsIcon(_settingsButtonConfig, _isDarkTheme);
+        ApplySettingsIconSize();
+    }
+
+    private void ApplySettingsIconSize()
+    {
+        var iconSize = _settingsButtonConfig.ShrinkIconOnHover && _settingsButtonIsHovered
+            ? _settingsButtonConfig.HoverIconSize
+            : _settingsButtonConfig.IconSize;
+
+        if (_settingsButton.Content is PathIcon icon)
+        {
+            icon.Width = iconSize;
+            icon.Height = iconSize;
+            icon.Foreground = _settingsButton.Foreground;
+        }
+        else if (_settingsButton.Content is Image image)
+        {
+            image.Width = iconSize;
+            image.Height = iconSize;
+        }
+    }
+
+    private static void AddToolbarChild(Grid grid, Control child, int column, Thickness? margin = null)
+    {
+        if (margin is not null)
+        {
+            child.Margin = margin.Value;
+        }
+
+        Grid.SetColumn(child, column);
+        grid.Children.Add(child);
+    }
+
+    private static IBrush BrushFor(string color)
+    {
+        return SolidColorBrush.Parse(color);
+    }
+
 }

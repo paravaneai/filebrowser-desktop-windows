@@ -108,7 +108,7 @@ internal static class SshCommandService
     {
         var startInfo = new ProcessStartInfo
         {
-            FileName = OperatingSystem.IsWindows() ? "ssh.exe" : "ssh",
+            FileName = "ssh.exe",
             UseShellExecute = false,
             CreateNoWindow = true,
             RedirectStandardError = true,

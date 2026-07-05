@@ -1,7 +1,7 @@
-# File Browser Desktop
+# File Browser Desktop for Windows
 
 <p align="center">
-  <img src="src/Assets/filebrowser.png" alt="File Browser logo" width="96">
+  <img src="src/Assets/app-logos/png/filebrowser.png" alt="File Browser logo" width="96">
 </p>
 
 <h3 align="center">A dedicated Windows desktop client for privately accessing File Browser over SSH.</h3>
@@ -26,7 +26,7 @@
 </p>
 
 <p align="center">
-  <img src="src/Assets/filebrowserdesktop-file-window-transfer-glossy-xl_transparent-polished.png" alt="File Browser Desktop preview">
+  <img src="src/Assets/app-logos/png/filebrowserdesktop-file-window-transfer-glossy-xl_transparent-polished.png" alt="File Browser Desktop preview">
 </p>
 
 ## Overview
@@ -125,7 +125,7 @@ The script installs or configures File Browser as a service, binds it to `127.0.
 
 ## Current Release
 
-The current public preview release is [v000.001.000](https://github.com/paravaneai/filebrowser-desktop-windows/releases/tag/v000.001.000).
+The current public preview release is [v001.001.001](https://github.com/paravaneai/filebrowser-desktop-windows/releases/tag/v001.001.001).
 
 This project is still early. Expect changes around installation, packaging, onboarding, and profile management before the first stable release.
 

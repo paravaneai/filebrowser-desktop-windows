@@ -1,0 +1,55 @@
+{
+  "windowIconFileName": "windows-icon/ico/filebrowserdesktop-file-window-transfer-glossy.ico",
+  "toolbarLogoFileName": "app-logos/png/filebrowserdesktop-file-window-transfer-glossy-xl_transparent-polished.png",
+  "toolbarLogoSize": 28,
+  "toolbarLogoMarginRight": 12,
+  
+  "startupLogoFileName": "app-logos/png/filebrowserdesktop-file-window-transfer-glossy-xl_transparent-polished.png",
+  "startupLogoSize": 64,
+  
+  "splashLogoFileName": "app-logos/png/filebrowserdesktop-file-window-transfer-glossy-xl_transparent-polished.png",
+  "showSplashLogo": false,
+  "splashLogoSize": 96,
+  "splashLogoOffsetX": 0,
+  "splashLogoOffsetY": -80,
+  
+  "showSplashTitle": false,
+  "splashTitleText": "",
+  "splashTitleOffsetX": 0,
+  "splashTitleOffsetY": -12,
+  
+  "splashStatusText": "Starting private file access...",
+  "splashStatusOffsetX": 0,
+  "splashStatusOffsetY": 120,
+  
+  "splashProgressWidth": 360,
+  "splashProgressOffsetX": 0,
+  "splashProgressOffsetY": 110,
+  
+  "splashMinimumMilliseconds": 1400,
+  "splashWindowWidth": 900,
+  "splashWindowHeight": 500,
+  "splashCardOuterMargin": 0,
+  "splashCardCornerRadius": 14,
+  "showSplashCardBorder": false,
+  "splashCardBorderThickness": 1,
+  "splashCardBorderColorDark": "#334155",
+  "splashCardBorderColorLight": "#D9E2EF",
+  "splashCardBackgroundColorDark": "#000000",
+  "splashCardBackgroundColorLight": "#FFFFFF",
+  "useSplashCardImage": true,
+  "splashCardImageFileName": "app-logos/png/file-browser-desktop-splash-image-dark-blue-paravane-labs-product-icon-wordmark-3x.png",
+  "splashCardImageOpacity": 1,
+  "useSplashCardTint": false,
+  "splashCardTintColorDark": "#990B1120",
+  "splashCardTintColorLight": "#66FFFFFF",
+  
+  "setupHeaderLogoFileName": "app-logos/png/filebrowser.png",
+  "setupHeaderLogoSize": 50,
+  "setupHeaderLogoOffsetX": 0,
+  "setupHeaderLogoOffsetY": 0,
+  "setupHeaderFrameSize": 44,
+  "showSetupHeaderIconFrame": false,
+  "showSetupHeaderIconBackground": false,
+  "showSetupHeaderIconBorder": false
+}

@@ -1,0 +1,14 @@
+{
+  "iconFileName": "settings-icon/png/apple-settings.png",
+  
+  "lightIconFileName": "settings-icon/png/settings-gear-svgrepo-com-2.png",
+  "darkIconFileName": "settings-icon/png/settings-gear-svgrepo-com-white-2.png",
+  "fallbackIconFileName": "settings-icon/svg/apple-settings.svg",
+  
+  "iconSize": 28,
+  "shrinkIconOnHover": true,
+  "hoverIconSize": 22,
+  "buttonSize": 42,
+  "removeButtonBorder": true,
+  "removeButtonBackground": true
+}
