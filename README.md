@@ -10,7 +10,7 @@
   <a href="INSTALL.md">Installation</a> |
   <a href="SERVER_SETUP.md">Server setup</a> |
   <a href="SECURITY.md">Security</a> |
-  <a href="CHANGELOG.md">Release notes</a> |
+  <a href="https://github.com/paravaneai/filebrowser-desktop-windows/releases">Releases</a> |
   <a href="CONTRIBUTING.md">Contributing</a>
 </p>
 
@@ -119,13 +119,12 @@ The script installs or configures File Browser as a service, binds it to `127.0.
 | [SERVER_SETUP.md](SERVER_SETUP.md) | Server install and existing-server setup |
 | [SECURITY.md](SECURITY.md) | Security model, credential storage, and cleanup |
 | [PACKAGING.md](PACKAGING.md) | Release packaging notes |
-| [CHANGELOG.md](CHANGELOG.md) | Version history |
 | [SUPPORT.md](SUPPORT.md) | Support expectations |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | Development and pull request guidance |
 
 ## Current Release
 
-The current public preview release is [v001.001.001](https://github.com/paravaneai/filebrowser-desktop-windows/releases/tag/v001.001.001).
+The current public preview release is [v001.001.000](https://github.com/paravaneai/filebrowser-desktop-windows/releases/tag/v001.001.000).
 
 This project is still early. Expect changes around installation, packaging, onboarding, and profile management before the first stable release.
 
