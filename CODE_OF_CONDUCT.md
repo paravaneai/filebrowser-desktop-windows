@@ -18,4 +18,4 @@ This project is intended to be a respectful, practical, and welcoming place to c
 
 ## Reporting
 
-If this project becomes public, replace this section with the preferred private reporting contact for Paravane Labs.
+Report conduct concerns privately to Paravane Labs at `security@paravane.io`.
