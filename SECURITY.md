@@ -146,9 +146,3 @@ If you used the included setup script, the default database path is:
 ```
 
 Do not delete server data unless you understand what File Browser root and database paths are being used.
-
-## Reporting Security Issues
-
-If this repository is public, please use GitHub private vulnerability reporting if it is enabled for the repository. Otherwise, contact the repository maintainers privately before publishing details.
-
-Do not include passwords, private keys, tokens, server IPs, or other secrets in public issues.
