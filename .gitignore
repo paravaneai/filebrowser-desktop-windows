@@ -18,3 +18,5 @@ profiles.json
 
 # Local visual QA helper, not part of the distributable project.
 RunSplashPreview.cmd
+package-release.cmd
+aggressive-clean-all-dir.cmd
