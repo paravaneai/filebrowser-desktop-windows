@@ -15,6 +15,3 @@ TestResults/
 profiles.json
 *.log
 *.tmp
-
-# Local visual QA helper, not part of the distributable project.
-RunSplashPreview.cmd
