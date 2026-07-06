@@ -140,9 +140,11 @@ Please do not report sensitive security issues in public issues. See [SECURITY.m
 
 ## Relationship To File Browser
 
-File Browser Desktop is an independent Paravane Labs project. Paravane Labs does not own File Browser and is not affiliated with, endorsed by, or sponsored by the File Browser project.
+File Browser Desktop is complementary tooling designed to work with the upstream [filebrowser/filebrowser](https://github.com/filebrowser/filebrowser) project.
 
-File Browser is a separate project run by its own maintainers. This desktop app is only a convenience client for connecting to a File Browser instance that you operate.
+File Browser Desktop is an independent Paravane Labs project. Paravane Labs does not own, maintain, control, or represent the File Browser project, and is not affiliated with, endorsed by, sponsored by, or otherwise officially associated with the File Browser project or its maintainers.
+
+File Browser is a separate open source project maintained by its respective contributors. This application is provided solely as a convenience client for connecting to a File Browser instance that you operate or are authorized to access.
 
 ## License
 
